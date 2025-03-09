@@ -1,0 +1,33 @@
+SCHEMA@@PName@@Dir@@Msb@@Lsb@@Desc@@DU@@DU_BBOX
+VALUE@@awready@@OUTPUT@@0@@0@@-@@fir@@No
+VALUE@@wready@@OUTPUT@@0@@0@@-@@fir@@No
+VALUE@@awvalid@@INPUT@@0@@0@@-@@fir@@No
+VALUE@@awaddr@@INPUT@@11@@0@@-@@fir@@No
+VALUE@@wvalid@@INPUT@@0@@0@@-@@fir@@No
+VALUE@@wdata@@INPUT@@31@@0@@-@@fir@@No
+VALUE@@arready@@OUTPUT@@0@@0@@-@@fir@@No
+VALUE@@rready@@INPUT@@0@@0@@-@@fir@@No
+VALUE@@arvalid@@INPUT@@0@@0@@-@@fir@@No
+VALUE@@araddr@@INPUT@@11@@0@@-@@fir@@No
+VALUE@@rvalid@@OUTPUT@@0@@0@@-@@fir@@No
+VALUE@@rdata@@OUTPUT@@31@@0@@-@@fir@@No
+VALUE@@ss_tvalid@@INPUT@@0@@0@@-@@fir@@No
+VALUE@@ss_tdata@@INPUT@@31@@0@@-@@fir@@No
+VALUE@@ss_tlast@@INPUT@@0@@0@@-@@fir@@No
+VALUE@@ss_tready@@OUTPUT@@0@@0@@-@@fir@@No
+VALUE@@sm_tready@@INPUT@@0@@0@@-@@fir@@No
+VALUE@@sm_tvalid@@OUTPUT@@0@@0@@-@@fir@@No
+VALUE@@sm_tdata@@OUTPUT@@31@@0@@-@@fir@@No
+VALUE@@sm_tlast@@OUTPUT@@0@@0@@-@@fir@@No
+VALUE@@tap_WE@@OUTPUT@@3@@0@@bram for tap RAM@@fir@@No
+VALUE@@tap_EN@@OUTPUT@@0@@0@@-@@fir@@No
+VALUE@@tap_Di@@OUTPUT@@31@@0@@-@@fir@@No
+VALUE@@tap_A@@OUTPUT@@11@@0@@-@@fir@@No
+VALUE@@tap_Do@@INPUT@@31@@0@@-@@fir@@No
+VALUE@@data_WE@@OUTPUT@@3@@0@@bram for data RAM@@fir@@No
+VALUE@@data_EN@@OUTPUT@@0@@0@@-@@fir@@No
+VALUE@@data_Di@@OUTPUT@@31@@0@@-@@fir@@No
+VALUE@@data_A@@OUTPUT@@11@@0@@-@@fir@@No
+VALUE@@data_Do@@INPUT@@31@@0@@-@@fir@@No
+VALUE@@axis_clk@@INPUT@@0@@0@@-@@fir@@No
+VALUE@@axis_rst_n@@INPUT@@0@@0@@-@@fir@@No

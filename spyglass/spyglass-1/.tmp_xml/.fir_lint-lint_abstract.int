@@ -1,0 +1,5 @@
+INPUT@@/home/course/u111011201/SoCLab/Lab3/spyglass/spyglass-1/lint/lint_abstract/spyglass_reports@@/home/course/u111011201/SoCLab/Lab3/spyglass/spyglass-1/html_reports/data_files/@@fir@@lint-lint_abstract@@
+COPY@@/home/course/u111011201/SoCLab/Lab3/spyglass/spyglass-1/lint/lint_abstract/spyglass_reports/moresimple.rpt@@data_files/fir_lint-lint_abstract_moresimple.rpt@@
+COPY@@/home/course/u111011201/SoCLab/Lab3/spyglass/spyglass-1/lint/lint_abstract/spyglass_reports/no_msg_reporting_rules.rpt@@data_files/fir_lint-lint_abstract_no_msg_reporting_rules.rpt@@
+PROCESS@@lint@@SpyGlass@@abstract_view
+COPY@@/home/course/u111011201/SoCLab/Lab3/spyglass/spyglass-1/lint/lint_abstract/spyglass.log@@data_files/fir_lint-lint_abstract_spyglass.log@@
