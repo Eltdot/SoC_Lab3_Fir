@@ -182,7 +182,9 @@ module data #(
   input   wire                     ap_start,
   input   wire [(pDATA_WIDTH-1):0] tap_Do,
   output  reg                      sstlast_reg,
-  output  reg  [5:0]               fir_data_count           
+  output  reg  [5:0]               fir_data_count,
+  input   wire [(pDATA_WIDTH-1):0] data_len_reg,
+  input   wire [(pDATA_WIDTH-1):0] tap_num_reg          
 );
   reg [5:0] total_num_data; 
   reg [5:0] data_addr_gen; 
@@ -364,7 +366,7 @@ module data #(
   assign data_A = {4'b0, data_addr_gen, 2'b0};
   assign data_Di = ss_tdata;
   assign base_addr = (state == TRAN) ? next_sstdata_addr : base_addr_last;  // combi loop
-  assign tape_num = (Tape_Num - 1) & 6'b111111;
+  assign tape_num = (tap_num_reg - 1) & 6'b111111;
   assign this_round_num = ((state == TRAN) & (ss_tvalid)) ? total_num_data : this_round_num_last;
 
   always @(*) begin
@@ -406,7 +408,7 @@ module data #(
         data_addr_gen = base_addr;
       end
       FIR: begin
-        data_addr_gen = (base_addr >= fir_data_count) ? (base_addr - fir_data_count) : (Tape_Num + base_addr - fir_data_count);
+        data_addr_gen = (base_addr >= fir_data_count) ? (base_addr - fir_data_count) : (tap_num_reg + base_addr - fir_data_count);
       end
       default: begin
         data_addr_gen = 0;
@@ -471,7 +473,9 @@ module tap #(
   input   wire                     ap_idle,
   output  wire                     r_permit,
   output  reg  [(pADDR_WIDTH-1):0] address_reg,
-  input   wire [5:0]               fir_data_count
+  input   wire [5:0]               fir_data_count,
+  output  reg  [(pDATA_WIDTH-1):0] tap_num_reg,
+  output  reg  [(pDATA_WIDTH-1):0] data_len_reg
 );
 
   // localparam for state
@@ -491,8 +495,8 @@ module tap #(
   wire r_permit_fir;                     
 
   reg [(pDATA_WIDTH-1):0] data_reg;
-  reg [(pDATA_WIDTH-1):0] data_len_reg;
-  reg [(pDATA_WIDTH-1):0] tap_num_reg;
+  //reg [(pDATA_WIDTH-1):0] data_len_reg;
+  //reg [(pDATA_WIDTH-1):0] tap_num_reg;
   reg [(pDATA_WIDTH-1):0] read_data_reg;
   reg rvalid_reg;
   wire writing;
@@ -512,8 +516,8 @@ module tap #(
   assign arready = (~(writing) & arvalid) & (state == WAIT | can_read_fir);
   assign ap_crtl = {29'b0, ap_idle, ap_done, ap_start};
   assign rdata = read_data_reg;
-  assign awready = writing & (state == WAIT);
-  assign wready = writing & (state == WAIT);
+  assign awready = writing & ((state == WAIT) | (state == FIR));
+  assign wready = writing & ((state == WAIT) | (state == FIR));
   assign fir_read_ok = (state == FIR) & arvalid;
 
   always @(posedge axis_clk or negedge axis_rst_n) begin
