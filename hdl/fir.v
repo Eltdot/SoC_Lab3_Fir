@@ -50,6 +50,8 @@ module fir
   wire [(pADDR_WIDTH-1):0] address_reg;  
   wire sstlast_reg;
   wire [5:0] fir_data_count;
+  wire [(pDATA_WIDTH-1):0] tap_num_reg;
+  wire [(pDATA_WIDTH-1):0] data_len_reg;
 
   tap #(
     .pADDR_WIDTH(pADDR_WIDTH),
@@ -80,7 +82,9 @@ module fir
     .ap_idle(ap_idle),
     .r_permit(r_permit),
     .address_reg(address_reg), 
-    .fir_data_count(fir_data_count)
+    .fir_data_count(fir_data_count),
+    .tap_num_reg(tap_num_reg),
+    .data_len_reg(data_len_reg)
   );
 
   data #(
@@ -106,7 +110,9 @@ module fir
     .ap_start      (ap_start),
     .tap_Do        (tap_Do),
     .sstlast_reg   (sstlast_reg),
-    .fir_data_count(fir_data_count)
+    .fir_data_count(fir_data_count),
+    .tap_num_reg(tap_num_reg),
+    .data_len_reg(data_len_reg)
 );
   
 
