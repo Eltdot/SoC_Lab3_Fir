@@ -42,7 +42,6 @@ module fir
     input   wire                     axis_clk,
     input   wire                     axis_rst_n           
 );
-
   wire ap_start;
   wire ap_done;
   wire ap_idle;
@@ -115,8 +114,6 @@ module fir
     .data_len_reg(data_len_reg)
 );
   
-
-
   reg [1:0] state_ap;
   reg [1:0] next_state_ap;
   
@@ -214,7 +211,6 @@ module data #(
   reg [(pDATA_WIDTH-1):0] y_tmp_reg;
   reg [(pDATA_WIDTH-1):0] sm_tdata_reg;
   
-
   // state for data
   localparam IDLE = 2'b00;
   localparam TRAN = 2'b01;
@@ -325,15 +321,15 @@ module data #(
     end
   end
 
-  reg [(pDATA_WIDTH-1):0] sm_tdata_reg_last;
-  reg sm_tvalid_last;
+  reg [(pDATA_WIDTH-1):0] sm_tdata_reg_prev;
+  reg sm_tvalid_prev;
   always @(posedge axis_clk or negedge axis_rst_n) begin
     if (~axis_rst_n) begin
-      sm_tdata_reg_last <= 0;
-      sm_tvalid_last <= 0;
+      sm_tdata_reg_prev <= 0;
+      sm_tvalid_prev <= 0;
     end else begin
-      sm_tdata_reg_last <= sm_tdata_reg;
-      sm_tvalid_last <= sm_tvalid;
+      sm_tdata_reg_prev <= sm_tdata_reg;
+      sm_tvalid_prev <= sm_tvalid;
     end
   end
 
@@ -345,23 +341,23 @@ module data #(
       sm_tvalid = 1;
       sm_tdata_reg = y_tmp_reg;
     end else begin
-      sm_tvalid = sm_tvalid_last;
-      sm_tdata_reg = sm_tdata_reg_last;
+      sm_tvalid = sm_tvalid_prev;
+      sm_tdata_reg = sm_tdata_reg_prev;
     end
   end
 
-  reg [5:0] base_addr_last;
+  reg [5:0] base_addr_prev;
   always @(posedge axis_clk or negedge axis_rst_n) begin
     if (~axis_rst_n) begin
-      base_addr_last <= 0;
+      base_addr_prev <= 0;
     end else begin
-      base_addr_last <= base_addr;
+      base_addr_prev <= base_addr;
     end
   end
 
-  reg [5:0] this_round_num_last;
+  reg [5:0] this_round_num_prev;
   always @(posedge axis_clk) begin
-    this_round_num_last <= this_round_num;
+    this_round_num_prev <= this_round_num;
   end
 
   assign sm_tdata = sm_tdata_reg;
@@ -371,9 +367,9 @@ module data #(
   assign data_WE = {4{ss_tready}};
   assign data_A = {4'b0, data_addr_gen, 2'b0};
   assign data_Di = ss_tdata;
-  assign base_addr = (state == TRAN) ? next_sstdata_addr : base_addr_last;  // combi loop
+  assign base_addr = (state == TRAN) ? next_sstdata_addr : base_addr_prev;  // combi loop
   assign tape_num = (tap_num_reg - 1) & 6'b111111;
-  assign this_round_num = ((state == TRAN) & (ss_tvalid)) ? total_num_data : this_round_num_last;
+  assign this_round_num = ((state == TRAN) & (ss_tvalid)) ? total_num_data : this_round_num_prev;
 
   always @(*) begin
     case (state)
@@ -422,12 +418,12 @@ module data #(
     endcase
   end
 
-  reg sstlast_reg_last;
+  reg sstlast_reg_prev;
   always @(posedge axis_clk or negedge axis_rst_n) begin
     if (~axis_rst_n) begin
-      sstlast_reg_last <= 0;
+      sstlast_reg_prev <= 0;
     end else begin
-      sstlast_reg_last <= sstlast_reg;
+      sstlast_reg_prev <= sstlast_reg;
     end
   end
   always @(*) begin
@@ -443,11 +439,10 @@ module data #(
         end
       end
       default: begin
-        sstlast_reg = sstlast_reg_last;
+        sstlast_reg = sstlast_reg_prev;
       end
     endcase
   end
-
 endmodule
 
 module tap #(
@@ -493,8 +488,7 @@ module tap #(
 
   // ap_crtl
   wire [(pDATA_WIDTH-1):0] ap_crtl; 
-  
-  
+   
   wire w_permit;
   
   //wire r_permit;
@@ -557,15 +551,6 @@ module tap #(
     end
   end
 
-  /*always @(posedge axis_clk or negedge axis_rst_n) begin
-    if (~axis_rst_n) begin
-      rvalid_reg <= 0;
-    end else begin
-      rvalid_reg <= rvalid_tmp;
-    end
-  end*/
-
- 
 // next_state update
   always @(*) begin
     case (state)
@@ -632,15 +617,15 @@ end
     endcase
   end
 
-  reg [(pADDR_WIDTH-1):0] address_reg_last;
-  reg [(pDATA_WIDTH-1):0] data_reg_last;
+  reg [(pADDR_WIDTH-1):0] address_reg_prev;
+  reg [(pDATA_WIDTH-1):0] data_reg_prev;
   always @(posedge axis_clk or negedge axis_rst_n) begin
     if (~axis_rst_n) begin
-      address_reg_last <= address_reg;
-      data_reg_last <= data_reg;
+      address_reg_prev <= address_reg;
+      data_reg_prev <= data_reg;
     end else begin
-      address_reg_last <= address_reg;
-      data_reg_last <= data_reg;
+      address_reg_prev <= address_reg;
+      data_reg_prev <= data_reg;
     end
   end
  
@@ -656,25 +641,25 @@ end
         end else if (arvalid) begin
           address_reg = araddr;
         end else begin
-          address_reg = address_reg_last;
+          address_reg = address_reg_prev;
         end
         if (wvalid) begin
           data_reg = wdata;
         end else begin
-          data_reg = data_reg_last;
+          data_reg = data_reg_prev;
         end 
       end
       WAIT: begin
-        address_reg = address_reg_last;
-        data_reg = data_reg_last;
+        address_reg = address_reg_prev;
+        data_reg = data_reg_prev;
       end
       FIR: begin
         if (arvalid) begin
           address_reg = araddr;
         end else begin
-          address_reg = address_reg_last;
+          address_reg = address_reg_prev;
         end
-        data_reg = data_reg_last;
+        data_reg = data_reg_prev;
       end
       default: begin
         address_reg = 0;
@@ -683,13 +668,13 @@ end
     endcase
   end
 
-  reg [(pADDR_WIDTH-1):0] tap_A_last;
+  reg [(pADDR_WIDTH-1):0] tap_A_prev;
 
   always @(posedge axis_clk or negedge axis_rst_n) begin
     if (~axis_rst_n) begin
-      tap_A_last <= 0;
+      tap_A_prev <= 0;
     end else begin
-      tap_A_last <= tap_A;
+      tap_A_prev <= tap_A;
     end
   end
 
@@ -703,38 +688,37 @@ end
           if (address_reg[7] & (address_reg[11:8] == 0)) begin
             tap_A = {5'b0, address_reg[6:2], 2'b0};
           end else begin
-            tap_A = tap_A_last;
+            tap_A = tap_A_prev;
           end
         end else begin
           if (r_permit & (address_reg[7] & (address_reg[11:8] == 0))) begin
             tap_A = {5'b0, address_reg[6:2], 2'b0};
           end else begin
-            tap_A = tap_A_last;
+            tap_A = tap_A_prev;
           end
         end
       end
     endcase
   end
 
-  reg ap_start_last;
-  reg [(pDATA_WIDTH-1):0] data_len_reg_last;
-  reg [(pDATA_WIDTH-1):0] tap_Di_last;
-  reg [(pDATA_WIDTH-1):0] tap_num_reg_last;
+  reg ap_start_prev;
+  reg [(pDATA_WIDTH-1):0] data_len_reg_prev;
+  reg [(pDATA_WIDTH-1):0] tap_Di_prev;
+  reg [(pDATA_WIDTH-1):0] tap_num_reg_prev;
 
   always @(posedge axis_clk or negedge axis_rst_n) begin
     if (~axis_rst_n) begin
-      ap_start_last <= 0;
-      data_len_reg_last <= 0;
-      tap_num_reg_last <= 0;
-      tap_Di_last <= 0;
+      ap_start_prev <= 0;
+      data_len_reg_prev <= 0;
+      tap_num_reg_prev <= 0;
+      tap_Di_prev <= 0;
     end else begin
-      ap_start_last <= ap_start;
-      data_len_reg_last <= data_len_reg;
-      tap_num_reg_last <= tap_num_reg;
-      tap_Di_last <= tap_Di;
+      ap_start_prev <= ap_start;
+      data_len_reg_prev <= data_len_reg;
+      tap_num_reg_prev <= tap_num_reg;
+      tap_Di_prev <= tap_Di;
     end
   end
-
 
   always @(*) begin
     if (w_permit & (address_reg == 12'h0)) begin
@@ -743,7 +727,7 @@ end
       if (state == FIR) begin
         ap_start = 0;
       end else begin
-        ap_start = ap_start_last;
+        ap_start = ap_start_prev;
       end
     end
   end
@@ -752,7 +736,7 @@ end
     if (w_permit & (address_reg >= 12'h10 & address_reg <= 12'h13)) begin
       data_len_reg = data_reg;
     end else begin
-      data_len_reg = data_len_reg_last;
+      data_len_reg = data_len_reg_prev;
     end
   end
 
@@ -760,7 +744,7 @@ end
     if (w_permit & (address_reg >= 12'h14 & address_reg <= 12'h18)) begin
       tap_num_reg = data_reg;
     end else begin
-      tap_num_reg = tap_num_reg_last;
+      tap_num_reg = tap_num_reg_prev;
     end
   end
 
@@ -768,16 +752,16 @@ end
     if (w_permit & (address_reg[7] & (address_reg[11:8] == 0))) begin
       tap_Di = data_reg;
     end else begin
-      tap_Di = tap_Di_last;
+      tap_Di = tap_Di_prev;
     end
   end
 
-  reg [(pDATA_WIDTH-1):0] read_data_reg_last;
+  reg [(pDATA_WIDTH-1):0] read_data_reg_prev;
   always @(posedge axis_clk or negedge axis_rst_n) begin
     if (~axis_rst_n) begin
-      read_data_reg_last <= 0;
+      read_data_reg_prev <= 0;
     end else begin
-      read_data_reg_last <= read_data_reg;
+      read_data_reg_prev <= read_data_reg;
     end
   end
 
@@ -795,7 +779,7 @@ end
         read_data_reg = 32'hffffffff;
       end
     end else begin
-      read_data_reg = read_data_reg_last;
+      read_data_reg = read_data_reg_prev;
     end
   end
 endmodule
