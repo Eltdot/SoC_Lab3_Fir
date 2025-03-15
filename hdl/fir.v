@@ -731,7 +731,7 @@ end
   end
 
   always @(*) begin
-    if (w_permit & (address_reg >= 12'h10 & address_reg <= 12'h13)) begin
+    if (w_permit & (address_reg == 12'h10)) begin
       data_len_reg = data_reg;
     end else begin
       data_len_reg = data_len_reg_prev;
@@ -739,7 +739,7 @@ end
   end
 
   always @(*) begin
-    if (w_permit & (address_reg >= 12'h14 & address_reg <= 12'h18)) begin
+    if (w_permit & (address_reg == 12'h14)) begin
       tap_num_reg = data_reg;
     end else begin
       tap_num_reg = tap_num_reg_prev;
@@ -767,9 +767,9 @@ end
     if (r_permit) begin
       if (address_reg == 12'h0) begin
         read_data_reg = ap_crtl;
-      end else if (address_reg >= 12'h10 & address_reg <= 12'h14) begin
+      end else if (address_reg == 12'h10) begin
         read_data_reg = data_len_reg;
-      end else if (address_reg >= 12'h15 & address_reg <= 12'h18) begin
+      end else if (address_reg == 12'h14) begin
         read_data_reg = tap_num_reg;
       end else if ((address_reg[7] & (address_reg[11:8] == 0)) & state != FIR) begin
         read_data_reg = tap_Do;
