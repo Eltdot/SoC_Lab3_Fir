@@ -333,7 +333,7 @@ module data #(
     end
   end
 
-  always @(*) begin // Combi loop
+  always @(*) begin 
     if (state != FIR) begin
       sm_tvalid = 0;
       sm_tdata_reg = 0;
@@ -367,7 +367,7 @@ module data #(
   assign data_WE = {4{ss_tready}};
   assign data_A = {4'b0, data_addr_gen, 2'b0};
   assign data_Di = ss_tdata;
-  assign base_addr = (state == TRAN) ? next_sstdata_addr : base_addr_prev;  // combi loop
+  assign base_addr = (state == TRAN) ? next_sstdata_addr : base_addr_prev; 
   assign tape_num = (tap_num_reg - 1) & 6'b111111;
   assign this_round_num = ((state == TRAN) & (ss_tvalid)) ? total_num_data : this_round_num_prev;
 
@@ -495,8 +495,6 @@ module tap #(
   wire r_permit_fir;                     
 
   reg [(pDATA_WIDTH-1):0] data_reg;
-  //reg [(pDATA_WIDTH-1):0] data_len_reg;
-  //reg [(pDATA_WIDTH-1):0] tap_num_reg;
   reg [(pDATA_WIDTH-1):0] read_data_reg;
   reg rvalid_reg;
   wire writing;
