@@ -6,7 +6,7 @@ def read_input_file(filename):
         data = [float(line.strip()) for line in file.readlines()]
     return data
 
-def fir_filter(input_data, coefficients, tape_num=11, output_length=None):
+def fir_filter(input_data, coefficients, tape_num=32, output_length=None):
     """x[i]*coef[0] + x[i-1]*coef[1] + ... + x[i-10]*coef[10]"""
     assert len(coefficients) == tape_num, "should same as tape_num"
     
@@ -26,9 +26,9 @@ def write_output_file(filename, data):
             file.write(f"{value:.0f}\n")
 
 def main():
-    x_filename = r"D:\Verilog-porgram\SoC_Lab\Lab3\py\x.dat"
-    coef_filename = r"D:\Verilog-porgram\SoC_Lab\Lab3\py\coef.dat" 
-    output_filename = r"D:\Verilog-porgram\SoC_Lab\Lab3\py\y.dat"
+    x_filename = r"C:\Verilog\SoC_Lab3_Fir\lab03\lab03\py\x3.dat"
+    coef_filename = r"C:\Verilog\SoC_Lab3_Fir\lab03\lab03\py\coef3.dat" 
+    output_filename = r"C:\Verilog\SoC_Lab3_Fir\lab03\lab03\py\y3.dat"
     
     input_data = read_input_file(x_filename)
     
