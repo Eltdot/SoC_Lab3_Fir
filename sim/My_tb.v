@@ -372,14 +372,16 @@ task config_write;
     fork
       begin
         repeat (random_delay_aw) @(posedge axis_clk);
-          awvalid <= 1; awaddr <= addr;
+        awvalid <= 1; awaddr <= addr;
+        @(posedge axis_clk);
         while (!awready) @(posedge axis_clk);
           awvalid <= 0;
 		      awaddr <= 0;
       end
       begin
         repeat (random_delay_w) @(posedge axis_clk);
-          wvalid <= 1; wdata <= data;
+        wvalid <= 1; wdata <= data;
+        @(posedge axis_clk);
         while (!wready) @(posedge axis_clk);
           wvalid <= 0;                    
           wdata <= 0;
