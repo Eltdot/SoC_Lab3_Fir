@@ -284,6 +284,7 @@ module fir_tb ();
       for (i=0;i<(data_length-1);i=i+1) begin
         ss_tlast = 0; axi_stream_master_first(Din_list[i]);
         config_read_check_first(12'h00, 32'h00, 32'h0000_0002);
+        config_write(12'h10, 10);
       end
       //config_read_check_first(12'h00, 32'h00, 32'h0000_0002); // check idle = 0
       ss_tlast = 1; axi_stream_master_first(Din_list[(`Data_Num - 1)]);
@@ -299,6 +300,7 @@ module fir_tb ();
       for (i=0;i<(data_length_second-1);i=i+1) begin
         ss_tlast = 0; axi_stream_master_second(Din_list_second[i]);
         config_read_check_second(12'h00, 32'h00, 32'h0000_0002);
+        config_write(12'h14, 10);
       end
       ss_tlast = 1; axi_stream_master_second(Din_list_second[(`Data_Num - 1)]);
       ss_tlast = 0;
