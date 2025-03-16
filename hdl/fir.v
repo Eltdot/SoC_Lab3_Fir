@@ -466,7 +466,7 @@ module tap #(
   output  wire  [3:0]               tap_WE,
   output  wire                      tap_EN,
   output  wire  [(pDATA_WIDTH-1):0] tap_Di,
-  output  reg  [(pADDR_WIDTH-1):0] tap_A,
+  output  wire  [(pADDR_WIDTH-1):0] tap_A,
   input   wire [(pDATA_WIDTH-1):0] tap_Do,
   input   wire                     axis_clk,
   input   wire                     axis_rst_n, 
@@ -642,28 +642,7 @@ end
     end
   end
 
-  always @(*) begin
-    case (state)
-      FIR: begin
-        tap_A = {4'b0, fir_data_count, 2'b0};
-      end
-      default: begin
-        if (w_permit) begin
-          if (address_reg[7] & (address_reg[11:8] == 0)) begin
-            tap_A = {5'b0, address_reg[6:2], 2'b0};
-          end else begin
-            tap_A = tap_A_prev;
-          end
-        end else begin
-          if (r_permit & (address_reg[7] & (address_reg[11:8] == 0))) begin
-            tap_A = {5'b0, address_reg[6:2], 2'b0};
-          end else begin
-            tap_A = tap_A_prev;
-          end
-        end
-      end
-    endcase
-  end
+  assign tap_A = (state == FIR) ? {4'b0, fir_data_count, 2'b0} : (((w_permit | r_permit) & (address_reg[7] & (address_reg[11:8] == 0))) ? {5'b0, address_reg[6:2], 2'b0} : tap_A_prev);
 
   reg ap_start_prev;
   reg [(pDATA_WIDTH-1):0] data_len_reg_prev;
