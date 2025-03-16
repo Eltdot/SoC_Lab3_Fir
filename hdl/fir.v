@@ -426,6 +426,7 @@ module data #(
       sstlast_reg_prev <= sstlast_reg;
     end
   end
+
   always @(*) begin
     case (state)
       IDLE: begin
@@ -462,21 +463,21 @@ module tap #(
   input   wire [(pADDR_WIDTH-1):0] araddr,
   output  wire                     rvalid,
   output  wire [(pDATA_WIDTH-1):0] rdata,
-  output  reg  [3:0]               tap_WE,
-  output  reg                      tap_EN,
-  output  reg  [(pDATA_WIDTH-1):0] tap_Di,
+  output  wire  [3:0]               tap_WE,
+  output  wire                      tap_EN,
+  output  wire  [(pDATA_WIDTH-1):0] tap_Di,
   output  reg  [(pADDR_WIDTH-1):0] tap_A,
   input   wire [(pDATA_WIDTH-1):0] tap_Do,
   input   wire                     axis_clk,
   input   wire                     axis_rst_n, 
-  output  reg                      ap_start,
+  output  wire                      ap_start,
   input   wire                     ap_done,
   input   wire                     ap_idle,
   output  wire                     r_permit,
   output  reg  [(pADDR_WIDTH-1):0] address_reg,
   input   wire [5:0]               fir_data_count,
-  output  reg  [(pDATA_WIDTH-1):0] tap_num_reg,
-  output  reg  [(pDATA_WIDTH-1):0] data_len_reg
+  output  wire  [(pDATA_WIDTH-1):0] tap_num_reg,
+  output  wire  [(pDATA_WIDTH-1):0] data_len_reg
 );
 
   // localparam for state
@@ -489,11 +490,7 @@ module tap #(
   // ap_crtl
   wire [(pDATA_WIDTH-1):0] ap_crtl; 
    
-  wire w_permit;
-  
-  //wire r_permit;
-  wire r_permit_fir;                     
-
+  wire w_permit;                
   reg [(pDATA_WIDTH-1):0] data_reg;
   reg [(pDATA_WIDTH-1):0] read_data_reg;
   reg rvalid_reg;
@@ -525,7 +522,6 @@ module tap #(
       state <= next_state;
     end
   end
-
 
   always @(posedge axis_clk) begin
     can_read_fir <= fir_read_ok; 
@@ -582,38 +578,8 @@ module tap #(
     endcase
 end
 
-  always @(*) begin
-    case (state) 
-      IDLE: begin
-        tap_EN = 0;
-        tap_WE = 4'b0000;
-      end
-      TRAN: begin
-        tap_EN = 1;
-        if ((awaddr >= 12'h80 & awaddr <= 12'hFF)) begin
-          if (awvalid & wvalid) begin
-            tap_WE = 4'b1111;
-          end else begin
-            tap_WE = 4'b0000;
-          end
-        end else begin
-          tap_WE = 4'b0000;
-        end 
-      end
-      WAIT: begin
-        tap_WE = 4'b0000;
-        tap_EN = 1;
-      end
-      FIR: begin
-        tap_WE = 4'b0000;
-        tap_EN = 1;
-      end
-      default: begin
-        tap_WE = 4'b0000;
-        tap_EN = 0;
-      end
-    endcase
-  end
+  assign tap_WE = {4{(state == TRAN) & (awaddr[7] & (awaddr[11:8] == 0))}};
+  assign tap_EN = (state != IDLE);
 
   reg [(pADDR_WIDTH-1):0] address_reg_prev;
   reg [(pDATA_WIDTH-1):0] data_reg_prev;
@@ -718,41 +684,10 @@ end
     end
   end
 
-  always @(*) begin
-    if (w_permit & (address_reg == 12'h0)) begin
-      ap_start = data_reg;
-    end else begin
-      if (state == FIR) begin
-        ap_start = 0;
-      end else begin
-        ap_start = ap_start_prev;
-      end
-    end
-  end
-
-  always @(*) begin
-    if (w_permit & (address_reg == 12'h10)) begin
-      data_len_reg = data_reg;
-    end else begin
-      data_len_reg = data_len_reg_prev;
-    end
-  end
-
-  always @(*) begin
-    if (w_permit & (address_reg == 12'h14)) begin
-      tap_num_reg = data_reg;
-    end else begin
-      tap_num_reg = tap_num_reg_prev;
-    end
-  end
-
-  always @(*) begin
-    if (w_permit & (address_reg[7] & (address_reg[11:8] == 0))) begin
-      tap_Di = data_reg;
-    end else begin
-      tap_Di = tap_Di_prev;
-    end
-  end
+  assign ap_start = (w_permit & (address_reg == 12'h0)) ? data_reg : ((state == FIR) ? 0 : ap_start_prev); 
+  assign data_len_reg = (w_permit & (address_reg == 12'h10)) ? data_reg : data_len_reg_prev;
+  assign tap_num_reg = (w_permit & (address_reg == 12'h14)) ? data_reg : tap_num_reg_prev;
+  assign tap_Di = (w_permit & (address_reg[7] & (address_reg[11:8] == 0))) ? data_reg : tap_Di_prev;
 
   reg [(pDATA_WIDTH-1):0] read_data_reg_prev;
   always @(posedge axis_clk or negedge axis_rst_n) begin
