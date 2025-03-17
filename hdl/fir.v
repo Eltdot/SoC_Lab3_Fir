@@ -495,25 +495,24 @@ module tap #(
   reg [(pDATA_WIDTH-1):0] read_data_reg;
   reg rvalid_reg;
   wire writing;
-  wire fir_read_ok;
-  reg can_read_fir;
+  wire fir_read;
+  reg fir_read_d1;
   reg [1:0] state;
   reg [1:0] next_state;
   reg rvaild_down;
   wire rvalid_tmp;
   wire axis_clk_n;
 
-  assign axis_clk_n = ~axis_clk;
   assign writing = awvalid & wvalid;
   assign w_permit = writing & (state == TRAN);
   assign r_permit = arvalid & (state != IDLE);
   assign rvalid = (arready ? 1 : (rvaild_down ? 0 : rvalid_reg));
-  assign arready = (~(writing) & arvalid) & (state == WAIT | can_read_fir);
+  assign arready = (~(writing) & arvalid) & (state == WAIT | fir_read_d1);
   assign ap_crtl = {29'b0, ap_idle, ap_done, ap_start};
   assign rdata = read_data_reg;
   assign awready = writing & ((state == WAIT) | (state == FIR));
   assign wready = writing & ((state == WAIT) | (state == FIR));
-  assign fir_read_ok = (state == FIR) & arvalid;
+  assign fir_read = (state == FIR) & arvalid;
 
   always @(posedge axis_clk or negedge axis_rst_n) begin
     if (~axis_rst_n) begin
@@ -524,7 +523,7 @@ module tap #(
   end
 
   always @(posedge axis_clk) begin
-    can_read_fir <= fir_read_ok; 
+    fir_read_d1 <= fir_read; 
   end
 
   always @(posedge axis_clk or negedge axis_rst_n) begin
