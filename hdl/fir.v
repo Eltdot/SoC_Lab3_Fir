@@ -113,10 +113,14 @@ module fir
     .tap_num_reg(tap_num_reg),
     .data_len_reg(data_len_reg)
 );
-  
+
+/////////////////////////////////////////////////////////////////////////////////////////
+//                                    AP FSM                                           //
+/////////////////////////////////////////////////////////////////////////////////////////
+
   reg [1:0] state_ap;
   reg [1:0] next_state_ap;
-  
+
   // state_ap
   localparam IDLE_AP = 2'b00;
   localparam CAL_AP = 2'b01;
@@ -184,7 +188,7 @@ module data #(
   input   wire                     axis_rst_n,
   input   wire                     ap_start,
   input   wire [(pDATA_WIDTH-1):0] tap_Do,
-  output  reg                      sstlast_reg,
+  output  wire                      sstlast_reg,
   output  reg  [5:0]               fir_data_count,
   input   wire [(pDATA_WIDTH-1):0] data_len_reg,
   input   wire [(pDATA_WIDTH-1):0] tap_num_reg          
@@ -216,6 +220,10 @@ module data #(
   localparam TRAN = 2'b01;
   localparam FIR = 2'b10;
 
+  //////////////////////////////////////////////////////////////////////////
+  //                   base address and data counter                      //
+  //////////////////////////////////////////////////////////////////////////
+
   wire [5:0] total_num_data_tmp;
   assign total_num_data_tmp = (state == IDLE) ? 0 : (total_num_data == tape_num ? total_num_data : (ss_tready) ? (total_num_data + 1) : total_num_data);
 
@@ -227,7 +235,7 @@ module data #(
     end
   end
   
-
+  // Countdown is a register used to determine when y_reg should be read out.
   wire [31:0] countdown_tmp;
   assign countdown_tmp = (state != FIR) ? 32'hffffffff : ((fir_data_count == this_round_num) ? 3 : countdown - 1);
   always @(posedge axis_clk or negedge axis_rst_n) begin
@@ -238,6 +246,8 @@ module data #(
     end
   end
 
+
+  // fir_data_count is a register that counts how many data have been processed.
   wire [5:0] fir_data_count_tmp;
   assign fir_data_count_tmp = (state == FIR) ? fir_data_count + 1 : 0;
   always @(posedge axis_clk or negedge axis_rst_n) begin
@@ -248,20 +258,8 @@ module data #(
     end
   end
 
-  always @(posedge axis_clk or negedge axis_rst_n) begin
-    if (~axis_rst_n) begin
-      state <= IDLE;
-    end else begin
-      state <= next_state;
-    end
-  end
 
-  wire ss_tready_reg_tmp;
-  assign ss_tready_reg_tmp = (state == TRAN) & ss_tvalid;
-  always @(posedge axis_clk) begin
-    ss_tready_reg <= ss_tready_reg_tmp;
-  end
-
+  // next_sstdata_addr is a register used to indicate the storage address of the next data
   reg [5:0] next_sstdata_addr_tmp;
   always @(*) begin
     if (state == IDLE) begin
@@ -285,6 +283,23 @@ module data #(
     end
   end
 
+  reg [5:0] base_addr_prev;
+  always @(posedge axis_clk or negedge axis_rst_n) begin
+    if (~axis_rst_n) begin
+      base_addr_prev <= 0;
+    end else begin
+      base_addr_prev <= base_addr;
+    end
+  end
+
+  reg [5:0] this_round_num_prev;
+  always @(posedge axis_clk) begin
+    this_round_num_prev <= this_round_num;
+  end
+
+  /////////////////////////////////////////////////////////////////////////
+  //                        Main Data Flow                               //
+  /////////////////////////////////////////////////////////////////////////
   always @(posedge axis_clk or negedge axis_rst_n) begin
     if (~axis_rst_n) begin
       data_tmp <= 0;
@@ -321,6 +336,9 @@ module data #(
     end
   end
 
+  //////////////////////////////////////////////////////////////////////////
+  //                          axi-stream                                  //
+  //////////////////////////////////////////////////////////////////////////
   reg [(pDATA_WIDTH-1):0] sm_tdata_reg_prev;
   reg sm_tvalid_prev;
   always @(posedge axis_clk or negedge axis_rst_n) begin
@@ -333,6 +351,8 @@ module data #(
     end
   end
 
+  // sm_tvalid is asserted when a complete y value has been calculated
+  // sm_tdata also outputs the corresponding y value at that time for sm to read
   always @(*) begin 
     if (state != FIR) begin
       sm_tvalid = 0;
@@ -345,19 +365,12 @@ module data #(
       sm_tdata_reg = sm_tdata_reg_prev;
     end
   end
-
-  reg [5:0] base_addr_prev;
-  always @(posedge axis_clk or negedge axis_rst_n) begin
-    if (~axis_rst_n) begin
-      base_addr_prev <= 0;
-    end else begin
-      base_addr_prev <= base_addr;
-    end
-  end
-
-  reg [5:0] this_round_num_prev;
+  
+  // ss_tready is used to check if ss_tvalid is high and the current state is ready to receive new data
+  wire ss_tready_reg_tmp;
+  assign ss_tready_reg_tmp = (state == TRAN) & ss_tvalid;
   always @(posedge axis_clk) begin
-    this_round_num_prev <= this_round_num;
+    ss_tready_reg <= ss_tready_reg_tmp;
   end
 
   assign sm_tdata = sm_tdata_reg;
@@ -371,6 +384,19 @@ module data #(
   assign tape_num = (tap_num_reg - 1) & 6'b111111;
   assign this_round_num = ((state == TRAN) & (ss_tvalid)) ? total_num_data : this_round_num_prev;
 
+  ////////////////////////////////////////////////////////////////////////////
+  //                          Data FSM                                      //
+  ////////////////////////////////////////////////////////////////////////////
+
+  always @(posedge axis_clk or negedge axis_rst_n) begin
+    if (~axis_rst_n) begin
+      state <= IDLE;
+    end else begin
+      state <= next_state;
+    end
+  end
+  
+  
   always @(*) begin
     case (state)
       IDLE: begin
@@ -404,6 +430,10 @@ module data #(
     endcase
   end
 
+  ///////////////////////////////////////////////////////////////////////////////
+  //                     Data_ram Address Generator                            //
+  ///////////////////////////////////////////////////////////////////////////////
+
   always @(*) begin
     case (state)
       TRAN: begin
@@ -418,6 +448,10 @@ module data #(
     endcase
   end
 
+  ////////////////////////////////////////////////////////////////////////////////
+  //                       Last Data Register                                   //
+  ////////////////////////////////////////////////////////////////////////////////
+
   reg sstlast_reg_prev;
   always @(posedge axis_clk or negedge axis_rst_n) begin
     if (~axis_rst_n) begin
@@ -427,23 +461,7 @@ module data #(
     end
   end
 
-  always @(*) begin
-    case (state)
-      IDLE: begin
-        sstlast_reg = 0;
-      end
-      TRAN: begin
-        if (ss_tvalid & ss_tlast) begin
-          sstlast_reg = 1;
-        end else begin
-          sstlast_reg = 0;
-        end
-      end
-      default: begin
-        sstlast_reg = sstlast_reg_prev;
-      end
-    endcase
-  end
+  assign sstlast_reg = (state == TRAN) ? (ss_tvalid & ss_tlast) : ((state == IDLE) ? 0 : sstlast_reg_prev);
 endmodule
 
 module tap #(
@@ -486,10 +504,7 @@ module tap #(
   localparam WAIT = 2'b10; 
   localparam FIR = 2'b11; // do FIR
  
-
-  // ap_crtl
   wire [(pDATA_WIDTH-1):0] ap_crtl; 
-   
   wire w_permit;                
   reg [(pDATA_WIDTH-1):0] data_reg;
   reg [(pDATA_WIDTH-1):0] read_data_reg;
@@ -512,7 +527,16 @@ module tap #(
   assign rdata = read_data_reg;
   assign awready = writing & ((state == WAIT) | (state == FIR));
   assign wready = writing & ((state == WAIT) | (state == FIR));
-  assign fir_read = (state == FIR) & arvalid;
+  assign fir_read = (state == FIR) & arvalid; 
+
+  // fir_read indicates whether the current read operation is in the FIR state
+  always @(posedge axis_clk) begin
+    fir_read_d1 <= fir_read; 
+  end
+
+  ///////////////////////////////////////////////////////////////////////////////
+  //                                Tap FSM                                    //
+  ///////////////////////////////////////////////////////////////////////////////
 
   always @(posedge axis_clk or negedge axis_rst_n) begin
     if (~axis_rst_n) begin
@@ -522,30 +546,7 @@ module tap #(
     end
   end
 
-  always @(posedge axis_clk) begin
-    fir_read_d1 <= fir_read; 
-  end
-
-  always @(posedge axis_clk or negedge axis_rst_n) begin
-    if (~axis_rst_n) begin
-      rvaild_down <= 0;  
-    end else if (rvalid & rready) begin
-      rvaild_down <= 1;
-    end else begin
-      rvaild_down <= 0;
-    end
-  end
-
-  always @(posedge axis_clk or negedge axis_rst_n) begin
-    if (~axis_rst_n) begin
-      rvalid_reg <= 0;
-    end else begin
-      rvalid_reg <= rvalid;
-    end
-  end
-
-// next_state update
-  always @(*) begin
+   always @(*) begin
     case (state)
       IDLE: begin
         next_state <= TRAN;        
@@ -575,11 +576,31 @@ module tap #(
         next_state <= IDLE;
       end 
     endcase
-end
+  end
 
-  assign tap_WE = {4{(state == TRAN) & (awaddr[7] & (awaddr[11:8] == 0))}};
-  assign tap_EN = (state != IDLE);
+///////////////////////////////////////////////////////////////////////////////////
+//                               axi-lite                                        //
+///////////////////////////////////////////////////////////////////////////////////
+  
+  // rvalid_down is used to indicate when rvalid should be deasserted
+  always @(posedge axis_clk or negedge axis_rst_n) begin
+    if (~axis_rst_n) begin
+      rvaild_down <= 0;  
+    end else if (rvalid & rready) begin
+      rvaild_down <= 1;
+    end else begin
+      rvaild_down <= 0;
+    end
+  end
 
+  always @(posedge axis_clk or negedge axis_rst_n) begin
+    if (~axis_rst_n) begin
+      rvalid_reg <= 0;
+    end else begin
+      rvalid_reg <= rvalid;
+    end
+  end
+  
   reg [(pADDR_WIDTH-1):0] address_reg_prev;
   reg [(pDATA_WIDTH-1):0] data_reg_prev;
   always @(posedge axis_clk or negedge axis_rst_n) begin
@@ -592,6 +613,7 @@ end
     end
   end
  
+  // address_reg is a register used to store the input address from AXI-Lite, and data_reg is also a register used to store the input data from AXI-Lite
   always @(*) begin
     case (state)
       IDLE: begin
@@ -632,7 +654,6 @@ end
   end
 
   reg [(pADDR_WIDTH-1):0] tap_A_prev;
-
   always @(posedge axis_clk or negedge axis_rst_n) begin
     if (~axis_rst_n) begin
       tap_A_prev <= 0;
@@ -640,8 +661,11 @@ end
       tap_A_prev <= tap_A;
     end
   end
-
+  
+  // In the FIR state, tap_A generates the corresponding address based on the number of data items currently being processed. In the AXI-Lite read/write state, it generates the address based on the input address from AXI-Lite
   assign tap_A = (state == FIR) ? {4'b0, fir_data_count, 2'b0} : (((w_permit | r_permit) & (address_reg[7] & (address_reg[11:8] == 0))) ? {5'b0, address_reg[6:2], 2'b0} : tap_A_prev);
+  assign tap_WE = {4{(state == TRAN) & (awaddr[7] & (awaddr[11:8] == 0))}};
+  assign tap_EN = (state != IDLE);
 
   reg ap_start_prev;
   reg [(pDATA_WIDTH-1):0] data_len_reg_prev;
@@ -661,7 +685,7 @@ end
       tap_Di_prev <= tap_Di;
     end
   end
-
+  // The following four registers perform a write operation when the address matches their corresponding address
   assign ap_start = (w_permit & (address_reg == 12'h0)) ? data_reg : ((state == FIR) ? 0 : ap_start_prev); 
   assign data_len_reg = (w_permit & (address_reg == 12'h10)) ? data_reg : data_len_reg_prev;
   assign tap_num_reg = (w_permit & (address_reg == 12'h14)) ? data_reg : tap_num_reg_prev;
@@ -676,6 +700,7 @@ end
     end
   end
 
+  // read_data_reg is a register used to temporarily store the data to be read via AXI-Lite
   always @(*) begin
     if (r_permit) begin
       if (address_reg == 12'h0) begin
